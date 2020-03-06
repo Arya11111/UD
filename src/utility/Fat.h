@@ -478,7 +478,7 @@ class SdVolume {
        on FAT16 volumes or the first cluster number on FAT32 volumes. */
   uint32_t rootDirStart(void) const {return rootDirStart_;}
   /** return a pointer to the Sd2Card object for this volume */
-  static Sd2Card* sdCard(void) {return sdCard_;}
+  static Sd2Card* sdCard(void) {return uDisk_;}
 //------------------------------------------------------------------------------
 #if ALLOW_DEPRECATED_FUNCTIONS
   // Deprecated functions  - suppress cpplint warnings with NOLINT comment
@@ -502,7 +502,7 @@ class SdVolume {
 
   static cache_t cacheBuffer_;        // 512 byte cache for device blocks
   static uint32_t cacheBlockNumber_;  // Logical number of block in the cache
-  static Sd2Card* sdCard_;            // Sd2Card object for cache
+  static Sd2Card* uDisk_;            // Sd2Card object for cache
   static uint8_t cacheDirty_;         // cacheFlush() will write block if true
   static uint32_t cacheMirrorBlock_;  // block number for mirror FAT
 //
@@ -532,7 +532,7 @@ class SdVolume {
   uint8_t chainSize(uint32_t beginCluster, uint32_t* size) const;
   uint8_t fatGet(uint32_t cluster, uint32_t* value) const;
   uint8_t fatPut(uint32_t cluster, uint32_t value);
-  uint8_t fatPutEOC(uint32_t cluster) {
+  uint8_t fatPutEOC(uint32_t cluster){
     return fatPut(cluster, 0x0FFFFFFF);
   }
   uint8_t freeChain(uint32_t cluster);
@@ -540,13 +540,13 @@ class SdVolume {
     return  cluster >= 0xFF8;
   }
   uint8_t readBlock(uint32_t block, uint8_t* dst) {
-    return sdCard_->readBlock(block, dst);}
+    return uDisk_->readBlock(block, dst);}
   uint8_t readData(uint32_t block, uint16_t offset,
     uint16_t count, uint8_t* dst) {
-      return sdCard_->readData(block, offset, count, dst);
+      return uDisk_->readData(block, offset, count, dst);
   }
   uint8_t writeBlock(uint32_t block, const uint8_t* dst) {
-    return sdCard_->writeBlock(block, dst);
+    return uDisk_->writeBlock(block, dst);
   }
 };
 #endif  // SdFat_h

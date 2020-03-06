@@ -23,7 +23,7 @@
 // init cacheBlockNumber_to invalid SD block number
 uint32_t SdVolume::cacheBlockNumber_ = 0XFFFFFFFF;
 cache_t  SdVolume::cacheBuffer_;     // 512 byte cache for Sd2Card
-Sd2Card* SdVolume::sdCard_;          // pointer to SD card object
+Sd2Card* SdVolume::uDisk_ ;          // pointer to SD card object
 uint8_t  SdVolume::cacheDirty_ = 0;  // cacheFlush() will write block if true
 uint32_t SdVolume::cacheMirrorBlock_ = 0;  // mirror  block for second FAT
 //------------------------------------------------------------------------------
@@ -98,12 +98,12 @@ uint8_t SdVolume::allocContiguous(uint32_t count, uint32_t* curCluster) {
 //------------------------------------------------------------------------------
 uint8_t SdVolume::cacheFlush(void) {
   if (cacheDirty_) {
-    if (!sdCard_->writeBlock(cacheBlockNumber_, cacheBuffer_.data)) {
+    if (!uDisk_->writeBlock(cacheBlockNumber_, cacheBuffer_.data)) {
       return false;
     }
     // mirror FAT tables
     if (cacheMirrorBlock_) {
-      if (!sdCard_->writeBlock(cacheMirrorBlock_, cacheBuffer_.data)) {
+      if (!uDisk_->writeBlock(cacheMirrorBlock_, cacheBuffer_.data)) {
         return false;
       }
       cacheMirrorBlock_ = 0;
@@ -116,7 +116,7 @@ uint8_t SdVolume::cacheFlush(void) {
 uint8_t SdVolume::cacheRawBlock(uint32_t blockNumber, uint8_t action) {
   if (cacheBlockNumber_ != blockNumber) {
     if (!cacheFlush()) return false;
-    if (!sdCard_->readBlock(blockNumber, cacheBuffer_.data)) return false;
+    if (!uDisk_->readBlock(blockNumber, cacheBuffer_.data)) return false;
     cacheBlockNumber_ = blockNumber;
   }
   cacheDirty_ |= action;
@@ -313,24 +313,12 @@ uint8_t SdVolume::freeChain(uint32_t cluster) {
  * failure include not finding a valid partition, not finding a valid
  * FAT file system in the specified partition or an I/O error.
  */
-uint8_t SdVolume::init(Sd2Card* dev, uint8_t part) {
-  uint32_t volumeStartBlock = 0;
-  sdCard_ = dev;
-  // if part == 0 assume super floppy with FAT boot sector in block zero
-  // if part > 0 assume mbr volume with partition table
-/*  if (part) {
-    if (part > 4)return false;
-    if (!cacheRawBlock(volumeStartBlock, CACHE_FOR_READ)) return false;
-    part_t* p = &cacheBuffer_.mbr.part[part-1];
+ 
 
-	if ((p->boot & 0X7F) !=0  ||
-      p->totalSectors < 100 ||
-      p->firstSector == 0) {
-      // not a valid partition
-		return false;
-    }
-    volumeStartBlock = p->firstSector;
-  }*/
+uint8_t SdVolume::init(Sd2Card* dev, uint8_t part) {
+  uint32_t volumeStartBlock = 0;//卷起始块
+  uDisk_ = dev;
+
   if (!cacheRawBlock(volumeStartBlock, CACHE_FOR_READ)) return false;
   bpb_t* bpb = &cacheBuffer_.fbs.bpb;
   if (bpb->fatCount == 0 ||
@@ -374,7 +362,7 @@ uint8_t SdVolume::init(Sd2Card* dev, uint8_t part) {
   clusterCount_ >>= clusterSizeShift_;
 
   // FAT type is determined by cluster count
-    fatType_ = 16;
+  fatType_ = 16;
 
   return true;
 }

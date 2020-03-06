@@ -56,7 +56,10 @@ uint8_t const CMD33 = 0X21;
 /** ERASE - erase all previously selected blocks */
 uint8_t const CMD38 = 0X26;
 /** APP_CMD - escape for application specific command */
-uint8_t const CMD55 = 0X37;
+
+
+
+
 /** READ_OCR - read the OCR register of a card */
 uint8_t const CMD58 = 0X3A;
 /** SET_WR_BLK_ERASE_COUNT - Set the number of write blocks to be

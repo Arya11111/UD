@@ -343,7 +343,8 @@ boolean UDClass::begin(uint8_t csPin) {
     Return true if initialization succeeds, false otherwise.
 
    */
-  return card.init(SPI_HALF_SPEED, csPin) &&
+   //return disk.init(csPin)&&volume.init(disk)&&root.openRoot(volume);
+  return card.init( csPin) &&
          volume.init(card) &&
          root.openRoot(volume);
 }
@@ -352,9 +353,8 @@ boolean UDClass::begin(uint32_t clock, uint8_t csPin) {
   if(root.isOpen()) root.close();
 
 
-//return disk.init(clock, csPin)&&volume.init(disk)&&root.openRoot(volume);
-  return card.init(SPI_HALF_SPEED, csPin) &&
-         card.setSpiClock(clock) &&
+//return disk.init(csPin,clock )&&volume.init(disk)&&root.openRoot(volume);
+  return card.init(csPin,clock) &&
          volume.init(card) &&
          root.openRoot(volume);
 }

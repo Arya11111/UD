@@ -74,7 +74,7 @@ public:
   /*
      
    */
-  boolean begin(uint8_t csPin = SD_CHIP_SELECT_PIN);
+  boolean begin(uint8_t csPin = UD_CHIP_SELECT_PIN);
   boolean begin(uint32_t clock, uint8_t csPin);
   
   //call this when a card is removed. It will allow you to insert and initialise a new card.

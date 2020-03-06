@@ -94,7 +94,7 @@ static void EraseSector(uint32_t address)
 static void W25Q16_Write(uint32_t address,const uint8_t *data,uint16_t left)
 {
     uint16_t max;
-	while(left) {
+    while(left) {
       while(W25Q16_BUSY());//如果芯片繁忙就等在这里
   //    EraseSector(address);
       Write_Enable();//要先写入允许命令
@@ -103,113 +103,33 @@ static void W25Q16_Write(uint32_t address,const uint8_t *data,uint16_t left)
       SPI.transfer(address>>16);
       SPI.transfer(address>>8);
       SPI.transfer(address);
-	  if(left>256)
-		max = 256;
-	  else 
-		max = left;
+      if(left>256)
+        max = 256;
+      else 
+        max = left;
       for(uint16_t i=0;i<max;i++)
       {
         SPI.transfer(*(data+i));
       }
       CS_H;
-	  address += 256;
-	  data += 256;
-	  left -= 256;
-	}  
+      address += 256;
+      data += 256;
+      left -= 256;
+    }  
 }
 
 
-
-
-
-// functions for hardware SPI
-/** Send a byte to the card */
-static void spiSend(uint8_t b) {
-  SDCARD_SPI.transfer(b);
-}
-/** Receive a byte from the card */
-static  uint8_t spiRec(void) {
-  return SDCARD_SPI.transfer(0xFF);
-}
-
-//------------------------------------------------------------------------------
-// send command and return error code.  Return zero for OK
-uint8_t Sd2Card::cardCommand(uint8_t cmd, uint32_t arg) {
-  // end read if in partialBlockRead mode
-  readEnd();
-
-  // select card
-  chipSelectLow();
-
-  // wait up to 300 ms if busy
-  waitNotBusy(300);
-
-  // send command
-  spiSend(cmd | 0x40);
-
-  // send argument
-  for (int8_t s = 24; s >= 0; s -= 8) spiSend(arg >> s);
-
-  // send CRC
-  uint8_t crc = 0XFF;
-  if (cmd == CMD0) crc = 0X95;  // correct crc for CMD0 with arg 0
-  if (cmd == CMD8) crc = 0X87;  // correct crc for CMD8 with arg 0X1AA
-  spiSend(crc);
-
-  // wait for response
-  for (uint8_t i = 0; ((status_ = spiRec()) & 0X80) && i != 0XFF; i++)
-    ;
-  return status_;
-}
-//------------------------------------------------------------------------------
 /**
  * Determine the size of an SD flash memory card.
  *
  * \return The number of 512 byte data blocks in the card
  *         or zero if an error occurs.
  */
-uint32_t Sd2Card::cardSize(void) {
-  csd_t csd;
-  if (!readCSD(&csd)) return 0;
-  if (csd.v1.csd_ver == 0) {
-    uint8_t read_bl_len = csd.v1.read_bl_len;
-    uint16_t c_size = (csd.v1.c_size_high << 10)
-                      | (csd.v1.c_size_mid << 2) | csd.v1.c_size_low;
-    uint8_t c_size_mult = (csd.v1.c_size_mult_high << 1)
-                          | csd.v1.c_size_mult_low;
-    return (uint32_t)(c_size + 1) << (c_size_mult + read_bl_len - 7);
-  } else if (csd.v2.csd_ver == 1) {
-    uint32_t c_size = ((uint32_t)csd.v2.c_size_high << 16)
-                      | (csd.v2.c_size_mid << 8) | csd.v2.c_size_low;
-    return (c_size + 1) << 10;
-  } else {
-    error(SD_CARD_ERROR_BAD_CSD);
-    return 0;
-  }
+uint32_t Sd2Card::diskSizeByte(void) {
+  return 12*1024*1024;
 }
 //------------------------------------------------------------------------------
 static uint8_t chip_select_asserted = 0;
-
-void Sd2Card::chipSelectHigh(void) {
-  digitalWrite(chipSelectPin_, HIGH);
-/*#ifdef USE_SPI_LIB
-  if (chip_select_asserted) {
-    chip_select_asserted = 0;
-    SDCARD_SPI.endTransaction();
-  }
-#endif*/
-}
-//------------------------------------------------------------------------------
-void Sd2Card::chipSelectLow(void) {
-/*#ifdef USE_SPI_LIB
-  if (!chip_select_asserted) {
-    chip_select_asserted = 1;
-    SDCARD_SPI.beginTransaction(settings);
-  }
-#endif*/
-  digitalWrite(chipSelectPin_, LOW);
-}
-//------------------------------------------------------------------------------
 /** Erase a range of blocks.
  *
  * \param[in] firstBlock The address of the first block in the range.
@@ -231,41 +151,30 @@ uint8_t Sd2Card::erase(uint32_t firstBlock, uint32_t lastBlock) {
   uint32_t firstS = (firstBlock/8)*8;
   uint32_t lastS = (lastBlock/8)*8;
   while(lastS >= firstS) {
-	if(lastS == firstS) { 
-		if (firstBlock-firstS) 
-		  W25Q16_Read(firstS<<9, flashtemp, (firstBlock-firstS)<<9);
-	    if ((firstS+8)-(lastBlock+1))
-	      W25Q16_Read((lastBlock+1)<<9, flashtemp+((firstBlock-firstS)<<9), ((firstS+8)-(lastBlock+1))<<9);
-	} else {
-		if (firstBlock-firstS)
-	      W25Q16_Read(firstS<<9, flashtemp, (firstBlock-firstS)<<9);
-    }	  
-	EraseSector(firstS<<9);
-	if (lastS == firstS) { 
-		if (firstBlock-firstS) 
-	      W25Q16_Write(firstS<<9, flashtemp, (firstBlock-firstS)<<9);	    
-	    if ((firstS+8)-(lastBlock+1)) 
-	      W25Q16_Write((lastBlock+1)<<9, flashtemp+((firstBlock-firstS)<<9), ((firstS+8)-(lastBlock+1))<<9);		
-	} else {
-		if (firstBlock-firstS)
-	      W25Q16_Write(firstS<<9, flashtemp, (firstBlock-firstS)<<9);
-	}  
-	firstS += 8;
-	firstBlock = firstS;
+    if(lastS == firstS) { 
+        if (firstBlock-firstS) 
+          W25Q.readFlash(firstS<<9, flashtemp, (firstBlock-firstS)<<9);
+        if ((firstS+8)-(lastBlock+1))
+          W25Q.readFlash((lastBlock+1)<<9, flashtemp+((firstBlock-firstS)<<9), ((firstS+8)-(lastBlock+1))<<9);
+    } else {
+        if (firstBlock-firstS)
+          W25Q.readFlash(firstS<<9, flashtemp, (firstBlock-firstS)<<9);
+    }     
+    W25Q.eraseSector(firstS<<9,false);
+    if (lastS == firstS) { 
+        if (firstBlock-firstS) 
+          W25Q.writeFlash(firstS<<9, flashtemp, (firstBlock-firstS)<<9);       
+        if ((firstS+8)-(lastBlock+1)) 
+          W25Q.writeFlash((lastBlock+1)<<9, flashtemp+((firstBlock-firstS)<<9), ((firstS+8)-(lastBlock+1))<<9);        
+    } else {
+        if (firstBlock-firstS)
+          W25Q.writeFlash(firstS<<9, flashtemp, (firstBlock-firstS)<<9);
+    }  
+    firstS += 8;
+    firstBlock = firstS;
   }
   return true;
 }
-//------------------------------------------------------------------------------
-/** Determine if card supports single block erase.
- *
- * \return The value one, true, is returned if single block erase is supported.
- * The value zero, false, is returned if single block erase is not supported.
- */
-uint8_t Sd2Card::eraseSingleBlockEnable(void) {
- // csd_t csd;
-  return 1;//readCSD(&csd) ? csd.v1.erase_blk_en : 0;
-}
-//------------------------------------------------------------------------------
 /**
  * Initialize an SD flash memory card.
  *
@@ -276,50 +185,11 @@ uint8_t Sd2Card::eraseSingleBlockEnable(void) {
  * the value zero, false, is returned for failure.  The reason for failure
  * can be determined by calling errorCode() and errorData().
  */
-uint8_t Sd2Card::init(uint8_t sckRateID, uint8_t chipSelectPin) {
-  errorCode_ = inBlock_ = partialBlockRead_ = type_ = 0;
-  chipSelectPin_ = chipSelectPin;
-  pinMode(chipSelectPin_, OUTPUT);
-  digitalWrite(chipSelectPin_, HIGH);
-  SDCARD_SPI.begin();
-  type_ = 1;
+uint8_t Sd2Card::init(uint8_t chipSelectPin,uint32_t freq) {
+  W25Q.begin(chipSelectPin,freq);
   return true;
 }
-// uint8_t init(uint8_t chipSelectPin, uint32_t freq){
-  // errorCode_ = inBlock_ = partialBlockRead_ = type_ = 0;
-  // chipSelectPin_ = chipSelectPin;
-  // UDISK.begin(chipSelectPin, freq);
-  // type_ = 1;
-  // return true;
-// }
-//------------------------------------------------------------------------------
-/**
- * Enable or disable partial block reads.
- *
- * Enabling partial block reads improves performance by allowing a block
- * to be read over the SPI bus as several sub-blocks.  Errors may occur
- * if the time between reads is too long since the SD card may timeout.
- * The SPI SS line will be held low until the entire block is read or
- * readEnd() is called.
- *
- * Use this for applications like the Adafruit Wave Shield.
- *
- * \param[in] value The value TRUE (non-zero) or FALSE (zero).)
- */
-void Sd2Card::partialBlockRead(uint8_t value) {
-//  readEnd();
-  partialBlockRead_ = value;
-}
-//------------------------------------------------------------------------------
-/**
- * Read a 512 byte block from an SD card device.
- *
- * \param[in] block Logical block to be read.
- * \param[out] dst Pointer to the location that will receive the data.
 
- * \return The value one, true, is returned for success and
- * the value zero, false, is returned for failure.
- */
 uint8_t Sd2Card::readBlock(uint32_t block, uint8_t* dst) {
   return readData(block, 0, 512, dst);
 }
@@ -338,55 +208,29 @@ uint8_t Sd2Card::readData(uint32_t block,
         uint16_t offset, uint16_t count, uint8_t* dst) {
   if (count == 0) return true;
   if ((count + offset) > 512) {
-    goto fail;
+    return false;
   }
   if (!inBlock_ || block != block_ || offset < offset_) {
     block_ = block;
     offset_ = 0;
     inBlock_ = 1;
   }
-   W25Q16_Read((block<<9)+offset, dst, count);
+  W25Q.readFlash((block<<9)+offset, (uint8_t *)dst, count);
   offset_ += count;
   return true;
-
- fail:
-  chipSelectHigh();
-  return false;
 }
 
-uint8_t Sd2Card::readRegister(uint8_t cmd, void* buf) {
-
-  return true;
-
-}
-
-#ifdef USE_SPI_LIB
-//------------------------------------------------------------------------------
-// set the SPI clock frequency
-uint8_t Sd2Card::setSpiClock(uint32_t clock)
-{
-  settings = SPISettings(clock, MSBFIRST, SPI_MODE0);
-  return true;
-}
-#endif
 //------------------------------------------------------------------------------
 // wait for card to go not busy
 uint8_t Sd2Card::waitNotBusy(unsigned int timeoutMillis) {
   unsigned int t0 = millis();
   unsigned int d;
   do {
-    if( W25Q16_BUSY() == 0) return true;
+    if(!W25Q.waitBusy()) return true;
     d = millis() - t0;
-  }
-  while (d < timeoutMillis);
+  }while (d < timeoutMillis);
   return false;
 }
-//------------------------------------------------------------------------------
-/** Wait for start block token */
-uint8_t Sd2Card::waitStartBlock(void) {
-  return true;
-}
-//------------------------------------------------------------------------------
 /**
  * Writes a 512 byte block to an SD card.
  *
@@ -396,76 +240,24 @@ uint8_t Sd2Card::waitStartBlock(void) {
  * the value zero, false, is returned for failure.
  */
 uint8_t Sd2Card::writeBlock(uint32_t blockNumber, const uint8_t* src) {
-#if SD_PROTECT_BLOCK_ZERO
+#if UD_PROTECT_BLOCK_ZERO
   // don't allow write to first block
   if (blockNumber == 0) {
-    error(SD_CARD_ERROR_WRITE_BLOCK_ZERO);
-    goto fail;
+    error(UD_DISK_ERROR_WRITE_BLOCK_ZERO);
+    return false;
   }
-#endif  // SD_PROTECT_BLOCK_ZERO
-
-  W25Q16_Read(blockNumber<<9,flashtemp,512);
+#endif  // UD_PROTECT_BLOCK_ZERO
+  W25Q.readFlash(blockNumber<<9, flashtemp, 512);
   for(uint16_t i=0;i<512;i++) {
-	  if(flashtemp[i]!=0xFF) {
-		  W25Q16_Read((blockNumber/8*8)<<9,flashtemp,4096);
-		  memset(flashtemp+((blockNumber%8)<<9),0xFF,512);
-		  EraseSector((blockNumber/8*8)<<9);
-		  W25Q16_Write((blockNumber/8*8)<<9,flashtemp,4096);
-		  break;
-	  }
+      if(flashtemp[i]!=0xFF) {
+          W25Q.readFlash((blockNumber/8*8)<<9,flashtemp,4096);
+          memset(flashtemp+((blockNumber%8)<<9),0xFF,512);
+          W25Q.eraseSector((blockNumber/8*8)<<9,false);
+          W25Q.writeFlash((blockNumber/8*8)<<9,flashtemp,4096);
+          break;
+      }
   }
-  W25Q16_Write(blockNumber<<9, src, 512);
-  return true;
-
- fail:
-  return false;
-}
-
-//------------------------------------------------------------------------------
-// send one block of data for write block or write multiple blocks
-uint8_t Sd2Card::writeData(uint8_t token, const uint8_t* src) {
-
-  for (uint16_t i = 0; i < 512; i++) {
-    spiSend(src[i]);
-  }
+  W25Q.writeFlash(blockNumber<<9, (uint8_t *)src, 512);
   return true;
 }
-//------------------------------------------------------------------------------
-/** Start a write multiple blocks sequence.
- *
- * \param[in] blockNumber Address of first block in sequence.
- * \param[in] eraseCount The number of blocks to be pre-erased.
- *
- * \note This function is used with writeData() and writeStop()
- * for optimized multiple block writes.
- *
- * \return The value one, true, is returned for success and
- * the value zero, false, is returned for failure.
- */
-uint8_t Sd2Card::writeStart(uint32_t blockNumber, uint32_t eraseCount) {
-#if SD_PROTECT_BLOCK_ZERO
-  // don't allow write to first block
-  if (blockNumber == 0) {
-    error(SD_CARD_ERROR_WRITE_BLOCK_ZERO);
-    goto fail;
-  }
-#endif  // SD_PROTECT_BLOCK_ZERO
-  erase(blockNumber,blockNumber+eraseCount-1);
-  return true;
-
- fail:
-  chipSelectHigh();
-  return false;
-}
-//------------------------------------------------------------------------------
-/** End a write multiple blocks sequence.
- *
-* \return The value one, true, is returned for success and
- * the value zero, false, is returned for failure.
- */
-uint8_t Sd2Card::writeStop(void) {
-  return true;
-
-}
-
 
