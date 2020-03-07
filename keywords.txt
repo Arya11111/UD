@@ -23,9 +23,10 @@ flush	KEYWORD2
 read	KEYWORD2
 seek	KEYWORD2
 position	KEYWORD2
-size	KEYWORD2	
+size	KEYWORD2
 close	KEYWORD2
 name	KEYWORD2
+getName	KEYWORD2
 isDirectory	KEYWORD2
 openNextFile	KEYWORD2
 rewindDirectory	KEYWORD2

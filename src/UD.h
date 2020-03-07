@@ -17,12 +17,14 @@
 #define FILE_READ UDLib::O_READ
 #define FILE_WRITE (UDLib::O_READ | UDLib::O_WRITE | UDLib::O_CREAT | UDLib::O_APPEND)
 
+#define STORAGE_TYPE_UD 3
 namespace UDLib {
 
 class File : public Stream {
  private:
   char _name[13]; // file name
   UdFile *_file;  // underlying file pointer
+  char _storageType[16];//StorageType+file name
 
 public:
   /**
@@ -90,10 +92,15 @@ public:
   void close();
   operator bool();
   /**
+   * @brief Strorage type and thehe file or directory name.
+   * @return The Strorage type and file or directory name.
+   */
+  char * name();
+  /**
    * @brief The file or directory.
    * @return The file or directory.
    */
-  char * name();
+  char * getName();
   /**
    * @brief Determine if the current file is a directory or a file.
    * @return True if this is a UdFile for a directory else false.

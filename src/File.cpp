@@ -11,7 +11,7 @@
 
 namespace UDLib{
 
-File::File(UdFile f, const char *n) {
+File::File(UdFile f, const char *n){
   _file = (UdFile *)malloc(sizeof(UdFile)); 
   if (_file) {
     memcpy(_file, &f, sizeof(UdFile));
@@ -19,14 +19,23 @@ File::File(UdFile f, const char *n) {
     strncpy(_name, n, 12);
     _name[12] = 0;
   }
+  String str = "UD:";
+  str.toCharArray(_storageType, str.length()+1);
 }
 
 File::File(void) {
   _file = 0;
   _name[0] = 0;
+  String str = "UD:";
+  str.toCharArray(_storageType, str.length()+1);
 }
 
 char *File::name(void) {
+  strncpy(_storageType+strlen(_storageType), _name, sizeof(_name));
+  return _storageType;
+}
+
+char *File::getName(){
   return _name;
 }
 
