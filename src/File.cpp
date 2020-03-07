@@ -1,55 +1,35 @@
-/*
-
- SD - a slightly more friendly wrapper for sdfatlib
-
- This library aims to expose a subset of SD card functionality
- in the form of a higher level "wrapper" object.
-
- License: GNU General Public License V3
+/*!
+ * @file File.cpp
+ * @brief This library aims to expose a subset of USB Disk functionality
+ * @n in the form of a higher level "wrapper" object.
+ * @copyright   Copyright (c) 2010 DFRobot Co.Ltd (http://www.dfrobot.com)
+ * @licence GNU General Public License V3
           (Because sdfatlib is licensed with this.)
-
- (C) Copyright 2010 SparkFun Electronics
-
  */
 
 #include <UD.h>
 
-/* for debugging file open/close leaks
-   uint8_t nfilecount=0;
-*/
 namespace UDLib{
 
-File::File(SdFile f, const char *n) {
-  // oh man you are kidding me, new() doesnt exist? Ok we do it by hand!
-  _file = (SdFile *)malloc(sizeof(SdFile)); 
+File::File(UdFile f, const char *n) {
+  _file = (UdFile *)malloc(sizeof(UdFile)); 
   if (_file) {
-    memcpy(_file, &f, sizeof(SdFile));
+    memcpy(_file, &f, sizeof(UdFile));
     
     strncpy(_name, n, 12);
     _name[12] = 0;
-    
-    /* for debugging file open/close leaks
-       nfilecount++;
-       Serial.print("Created \"");
-       Serial.print(n);
-       Serial.print("\": ");
-       Serial.println(nfilecount, DEC);
-    */
   }
 }
 
 File::File(void) {
   _file = 0;
   _name[0] = 0;
-  //Serial.print("Created empty file object");
 }
 
-// returns a pointer to the file name
 char *File::name(void) {
   return _name;
 }
 
-// a directory is a special type of file
 boolean File::isDirectory(void) {
   return (_file && _file->isDir());
 }
@@ -89,7 +69,6 @@ int File::read() {
   return -1;
 }
 
-// buffered read for more efficient, high speed reading
 int File::read(void *buf, uint16_t nbyte) {
   if (_file) 
     return _file->read(buf, nbyte);
@@ -130,12 +109,6 @@ void File::close() {
     _file->close();
     free(_file); 
     _file = 0;
-
-    /* for debugging file open/close leaks
-    nfilecount--;
-    Serial.print("Deleted ");
-    Serial.println(nfilecount, DEC);
-    */
   }
 }
 

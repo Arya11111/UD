@@ -1,7 +1,7 @@
-/* Arduino SdFat Library
+/* Arduino Fat Library
  * Copyright (C) 2009 by William Greiman
  *
- * This file is part of the Arduino SdFat Library
+ * This file is part of the Arduino Fat Library
  *
  * This Library is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,20 +14,20 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with the Arduino SdFat Library.  If not, see
+ * along with the Arduino FAT Library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
-#ifndef SdFat_h
-#define SdFat_h
+#ifndef __UDFAT_h
+#define __UDFAT_h
 /**
  * \file
- * SdFile and SdVolume classes
+ * UdFile and UdVolume classes
  */
 #if defined (__AVR__) || defined (__CPU_ARC__) 
 #include <avr/pgmspace.h>
 #endif
-#include "2Card.h"
-#include "FatStructs.h"
+#include "UdDisk.h"
+#include "UdFatStructs.h"
 #include <Print.h>
 //------------------------------------------------------------------------------
 /**
@@ -35,10 +35,11 @@
  */
 #define ALLOW_DEPRECATED_FUNCTIONS 1
 //------------------------------------------------------------------------------
-// forward declaration since SdVolume is used in SdFile
-class SdVolume;
+// forward declaration since UdVolume is used in UdFile
+namespace UDLib{
+class UdVolume;
 //==============================================================================
-// SdFile class
+// UdFile class
 
 // flags for ls()
 /** ls() flag to print modify date */
@@ -80,15 +81,15 @@ uint8_t const T_CREATE = 2;
 /** Set the file's write date and time */
 uint8_t const T_WRITE = 4;
 // values for type_
-/** This SdFile has not been opened. */
+/** This UdFile has not been opened. */
 uint8_t const FAT_FILE_TYPE_CLOSED = 0;
-/** SdFile for a file */
+/** UdFile for a file */
 uint8_t const FAT_FILE_TYPE_NORMAL = 1;
-/** SdFile for a FAT16 root directory */
+/** UdFile for a FAT16 root directory */
 uint8_t const FAT_FILE_TYPE_ROOT16 = 2;
-/** SdFile for a FAT32 root directory */
+/** UdFile for a FAT32 root directory */
 uint8_t const FAT_FILE_TYPE_ROOT32 = 3;
-/** SdFile for a subdirectory */
+/** UdFile for a subdirectory */
 uint8_t const FAT_FILE_TYPE_SUBDIR = 4;
 /** Test value for directory type */
 uint8_t const FAT_FILE_TYPE_MIN_DIR = FAT_FILE_TYPE_ROOT16;
@@ -130,14 +131,15 @@ uint16_t const FAT_DEFAULT_DATE = ((2000 - 1980) << 9) | (1 << 5) | 1;
 /** Default time for file timestamp is 1 am */
 uint16_t const FAT_DEFAULT_TIME = (1 << 11);
 //------------------------------------------------------------------------------
+
 /**
- * \class SdFile
+ * \class UdFile
  * \brief Access FAT16 and FAT32 files on SD and SDHC cards.
  */
-class SdFile : public Print {
+class UdFile : public Print {
  public:
-  /** Create an instance of SdFile. */
-  SdFile(void) : type_(FAT_FILE_TYPE_CLOSED) {}
+  /** Create an instance of UdFile. */
+  UdFile(void) : type_(FAT_FILE_TYPE_CLOSED) {}
   /**
    * writeError is set to true if an error occurs during a write().
    * Set writeError to false before calling print() and/or write() and check
@@ -153,7 +155,7 @@ class SdFile : public Print {
   }
   uint8_t close(void);
   uint8_t contiguousRange(uint32_t* bgnBlock, uint32_t* endBlock);
-  uint8_t createContiguous(SdFile* dirFile,
+  uint8_t createContiguous(UdFile* dirFile,
           const char* fileName, uint32_t size);
   /** \return The current cluster number for a file or directory. */
   uint32_t curCluster(void) const {return curCluster_;}
@@ -208,24 +210,24 @@ class SdFile : public Print {
   uint32_t fileSize(void) const {return fileSize_;}
   /** \return The first cluster number for a file or directory. */
   uint32_t firstCluster(void) const {return firstCluster_;}
-  /** \return True if this is a SdFile for a directory else false. */
+  /** \return True if this is a UdFile for a directory else false. */
   uint8_t isDir(void) const {return type_ >= FAT_FILE_TYPE_MIN_DIR;}
-  /** \return True if this is a SdFile for a file else false. */
+  /** \return True if this is a UdFile for a file else false. */
   uint8_t isFile(void) const {return type_ == FAT_FILE_TYPE_NORMAL;}
-  /** \return True if this is a SdFile for an open file/directory else false. */
+  /** \return True if this is a UdFile for an open file/directory else false. */
   uint8_t isOpen(void) const {return type_ != FAT_FILE_TYPE_CLOSED;}
-  /** \return True if this is a SdFile for a subdirectory else false. */
+  /** \return True if this is a UdFile for a subdirectory else false. */
   uint8_t isSubDir(void) const {return type_ == FAT_FILE_TYPE_SUBDIR;}
-  /** \return True if this is a SdFile for the root directory. */
+  /** \return True if this is a UdFile for the root directory. */
   uint8_t isRoot(void) const {
     return type_ == FAT_FILE_TYPE_ROOT16 || type_ == FAT_FILE_TYPE_ROOT32;
   }
   void ls(uint8_t flags = 0, uint8_t indent = 0);
-  uint8_t makeDir(SdFile* dir, const char* dirName);
-  uint8_t open(SdFile* dirFile, uint16_t index, uint8_t oflag);
-  uint8_t open(SdFile* dirFile, const char* fileName, uint8_t oflag);
+  uint8_t makeDir(UdFile* dir, const char* dirName);
+  uint8_t open(UdFile* dirFile, uint16_t index, uint8_t oflag);
+  uint8_t open(UdFile* dirFile, const char* fileName, uint8_t oflag);
 
-  uint8_t openRoot(SdVolume* vol);
+  uint8_t openRoot(UdVolume* vol);
   static void printDirName(const dir_t& dir, uint8_t width);
   static void printFatDate(uint16_t fatDate);
   static void printFatTime(uint16_t fatTime);
@@ -242,7 +244,7 @@ class SdFile : public Print {
   }
   int16_t read(void* buf, uint16_t nbyte);
   int8_t readDir(dir_t* dir);
-  static uint8_t remove(SdFile* dirFile, const char* fileName);
+  static uint8_t remove(UdFile* dirFile, const char* fileName);
   uint8_t remove(void);
   /** Set the file's current position to zero. */
   void rewind(void) {
@@ -262,7 +264,7 @@ class SdFile : public Print {
   uint8_t seekSet(uint32_t pos);
   /**
    * Use unbuffered reads to access this file.  Used with Wave
-   * Shield ISR.  Used with Sd2Card::partialBlockRead() in WaveRP.
+   * Shield ISR. 
    *
    * Not recommended for normal applications.
    */
@@ -272,7 +274,7 @@ class SdFile : public Print {
   uint8_t timestamp(uint8_t flag, uint16_t year, uint8_t month, uint8_t day,
           uint8_t hour, uint8_t minute, uint8_t second);
   uint8_t sync(void);
-  /** Type of this SdFile.  You should use isFile() or isDir() instead of type()
+  /** Type of this UdFile.  You should use isFile() or isDir() instead of type()
    * if possible.
    *
    * \return The file or directory type.
@@ -283,8 +285,8 @@ class SdFile : public Print {
   uint8_t unbufferedRead(void) const {
     return flags_ & F_FILE_UNBUFFERED_READ;
   }
-  /** \return SdVolume that contains this file. */
-  SdVolume* volume(void) const {return vol_;}
+  /** \return UdVolume that contains this file. */
+  UdVolume* volume(void) const {return vol_;}
   size_t write(uint8_t b);
   size_t write(const void* buf, uint16_t nbyte);
   size_t write(const char* str);
@@ -296,23 +298,23 @@ class SdFile : public Print {
 #if ALLOW_DEPRECATED_FUNCTIONS
 // Deprecated functions  - suppress cpplint warnings with NOLINT comment
   /** \deprecated Use:
-   * uint8_t SdFile::contiguousRange(uint32_t* bgnBlock, uint32_t* endBlock);
+   * uint8_t UdFile::contiguousRange(uint32_t* bgnBlock, uint32_t* endBlock);
    */
   uint8_t contiguousRange(uint32_t& bgnBlock, uint32_t& endBlock) {  // NOLINT
     return contiguousRange(&bgnBlock, &endBlock);
   }
  /** \deprecated Use:
-   * uint8_t SdFile::createContiguous(SdFile* dirFile,
+   * uint8_t UdFile::createContiguous(UdFile* dirFile,
    *   const char* fileName, uint32_t size)
    */
-  uint8_t createContiguous(SdFile& dirFile,  // NOLINT
+  uint8_t createContiguous(UdFile& dirFile,  // NOLINT
     const char* fileName, uint32_t size) {
     return createContiguous(&dirFile, fileName, size);
   }
 
   /**
    * \deprecated Use:
-   * static void SdFile::dateTimeCallback(
+   * static void UdFile::dateTimeCallback(
    *   void (*dateTime)(uint16_t* date, uint16_t* time));
    */
   static void dateTimeCallback(
@@ -320,40 +322,40 @@ class SdFile : public Print {
     oldDateTime_ = dateTime;
     dateTime_ = dateTime ? oldToNew : 0;
   }
-  /** \deprecated Use: uint8_t SdFile::dirEntry(dir_t* dir); */
+  /** \deprecated Use: uint8_t UdFile::dirEntry(dir_t* dir); */
   uint8_t dirEntry(dir_t& dir) {return dirEntry(&dir);}  // NOLINT
   /** \deprecated Use:
-   * uint8_t SdFile::makeDir(SdFile* dir, const char* dirName);
+   * uint8_t UdFile::makeDir(UdFile* dir, const char* dirName);
    */
-  uint8_t makeDir(SdFile& dir, const char* dirName) {  // NOLINT
+  uint8_t makeDir(UdFile& dir, const char* dirName) {  // NOLINT
     return makeDir(&dir, dirName);
   }
   /** \deprecated Use:
-   * uint8_t SdFile::open(SdFile* dirFile, const char* fileName, uint8_t oflag);
+   * uint8_t UdFile::open(UdFile* dirFile, const char* fileName, uint8_t oflag);
    */
-  uint8_t open(SdFile& dirFile, // NOLINT
+  uint8_t open(UdFile& dirFile, // NOLINT
     const char* fileName, uint8_t oflag) {
     return open(&dirFile, fileName, oflag);
   }
   /** \deprecated  Do not use in new apps */
-  uint8_t open(SdFile& dirFile, const char* fileName) {  // NOLINT
+  uint8_t open(UdFile& dirFile, const char* fileName) {  // NOLINT
     return open(dirFile, fileName, O_RDWR);
   }
   /** \deprecated Use:
-   * uint8_t SdFile::open(SdFile* dirFile, uint16_t index, uint8_t oflag);
+   * uint8_t UdFile::open(UdFile* dirFile, uint16_t index, uint8_t oflag);
    */
-  uint8_t open(SdFile& dirFile, uint16_t index, uint8_t oflag) {  // NOLINT
+  uint8_t open(UdFile& dirFile, uint16_t index, uint8_t oflag) {  // NOLINT
     return open(&dirFile, index, oflag);
   }
-  /** \deprecated Use: uint8_t SdFile::openRoot(SdVolume* vol); */
-  uint8_t openRoot(SdVolume& vol) {return openRoot(&vol);}  // NOLINT
+  /** \deprecated Use: uint8_t UdFile::openRoot(UdVolume* vol); */
+  uint8_t openRoot(UdVolume& vol) {return openRoot(&vol);}  // NOLINT
 
-  /** \deprecated Use: int8_t SdFile::readDir(dir_t* dir); */
+  /** \deprecated Use: int8_t UdFile::readDir(dir_t* dir); */
   int8_t readDir(dir_t& dir) {return readDir(&dir);}  // NOLINT
   /** \deprecated Use:
-   * static uint8_t SdFile::remove(SdFile* dirFile, const char* fileName);
+   * static uint8_t UdFile::remove(UdFile* dirFile, const char* fileName);
    */
-  static uint8_t remove(SdFile& dirFile, const char* fileName) {  // NOLINT
+  static uint8_t remove(UdFile& dirFile, const char* fileName) {  // NOLINT
     return remove(&dirFile, fileName);
   }
 //------------------------------------------------------------------------------
@@ -393,7 +395,7 @@ class SdFile : public Print {
   uint8_t   dirIndex_;      // index of entry in dirBlock 0 <= dirIndex_ <= 0XF
   uint32_t  fileSize_;      // file size in bytes
   uint32_t  firstCluster_;  // first cluster of file
-  SdVolume* vol_;           // volume where file is located
+  UdVolume* vol_;           // volume where file is located
 
   // private functions
   uint8_t addCluster(void);
@@ -405,7 +407,7 @@ class SdFile : public Print {
   dir_t* readDirCache(void);
 };
 //==============================================================================
-// SdVolume class
+// UdVolume class
 /**
  * \brief Cache for an SD data block
  */
@@ -426,13 +428,13 @@ union cache_t {
 };
 //------------------------------------------------------------------------------
 /**
- * \class SdVolume
+ * \class UdVolume
  * \brief Access FAT16 and FAT32 volumes on SD and SDHC cards.
  */
-class SdVolume {
+class UdVolume {
  public:
-  /** Create an instance of SdVolume */
-  SdVolume(void) :allocSearchStart_(2), fatType_(0) {}
+  /** Create an instance of UdVolume */
+  UdVolume(void) :allocSearchStart_(2), fatType_(0) {}
   /** Clear the cache and returns a pointer to the cache.  Used by the WaveRP
    *  recorder to do raw write to the SD card.  Not for normal apps.
    */
@@ -445,15 +447,15 @@ class SdVolume {
    * Initialize a FAT volume.  Try partition one first then try super
    * floppy format.
    *
-   * \param[in] dev The Sd2Card where the volume is located.
+   * \param[in] dev The UdDisk where the volume is located.
    *
    * \return The value one, true, is returned for success and
    * the value zero, false, is returned for failure.  Reasons for
    * failure include not finding a valid partition, not finding a valid
    * FAT file system or an I/O error.
    */
-  uint8_t init(Sd2Card* dev) { return init(dev, 0);}
-  uint8_t init(Sd2Card* dev, uint8_t part);
+  uint8_t init(UdDisk* dev) { return init(dev, 0);}
+  uint8_t init(UdDisk* dev, uint8_t part);
 
   // inline functions that return volume info
   /** \return The volume's cluster size in blocks. */
@@ -477,23 +479,23 @@ class SdVolume {
   /** \return The logical block number for the start of the root directory
        on FAT16 volumes or the first cluster number on FAT32 volumes. */
   uint32_t rootDirStart(void) const {return rootDirStart_;}
-  /** return a pointer to the Sd2Card object for this volume */
-  static Sd2Card* sdCard(void) {return uDisk_;}
+  /** return a pointer to the UdDisk object for this volume */
+  static UdDisk* udDisk(void) {return uDisk_;}
 //------------------------------------------------------------------------------
 #if ALLOW_DEPRECATED_FUNCTIONS
   // Deprecated functions  - suppress cpplint warnings with NOLINT comment
-  /** \deprecated Use: uint8_t SdVolume::init(Sd2Card* dev); */
-  uint8_t init(Sd2Card& dev) {return init(&dev);}  // NOLINT
+  /** \deprecated Use: uint8_t UdVolume::init(UdDisk* dev); */
+  uint8_t init(UdDisk& dev) {return init(&dev);}  // NOLINT
 
-  /** \deprecated Use: uint8_t SdVolume::init(Sd2Card* dev, uint8_t vol); */
-  uint8_t init(Sd2Card& dev, uint8_t part) {  // NOLINT
+  /** \deprecated Use: uint8_t UdVolume::init(UdDisk* dev, uint8_t vol); */
+  uint8_t init(UdDisk& dev, uint8_t part) {  // NOLINT
     return init(&dev, part);
   }
 #endif  // ALLOW_DEPRECATED_FUNCTIONS
 //------------------------------------------------------------------------------
   private:
-  // Allow SdFile access to SdVolume private data.
-  friend class SdFile;
+  // Allow UdFile access to UdVolume private data.
+  friend class UdFile;
 
   // value for action argument in cacheRawBlock to indicate read from cache
   static uint8_t const CACHE_FOR_READ = 0;
@@ -502,7 +504,7 @@ class SdVolume {
 
   static cache_t cacheBuffer_;        // 512 byte cache for device blocks
   static uint32_t cacheBlockNumber_;  // Logical number of block in the cache
-  static Sd2Card* uDisk_;            // Sd2Card object for cache
+  static UdDisk* uDisk_;            // UdDisk object for cache
   static uint8_t cacheDirty_;         // cacheFlush() will write block if true
   static uint32_t cacheMirrorBlock_;  // block number for mirror FAT
 //
@@ -549,4 +551,5 @@ class SdVolume {
     return uDisk_->writeBlock(block, dst);
   }
 };
-#endif  // SdFat_h
+};
+#endif

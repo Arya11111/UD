@@ -1,7 +1,7 @@
-/* Arduino SdFat Library
+/* Arduino FAT Library
  * Copyright (C) 2009 by William Greiman
  *
- * This file is part of the Arduino SdFat Library
+ * This file is part of the Arduino FAT Library
  *
  * This Library is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,25 +14,26 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with the Arduino SdFat Library.  If not, see
+ * along with the Arduino FAT Library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
-#include "Fat.h"
+#include "UdFat.h"
 #ifdef __AVR__
 #include <avr/pgmspace.h>
 #endif
 #include <Arduino.h>
+namespace UDLib{
 //------------------------------------------------------------------------------
 // callback function for date/time
-void (*SdFile::dateTime_)(uint16_t* date, uint16_t* time) = NULL;
+void (*UdFile::dateTime_)(uint16_t* date, uint16_t* time) = NULL;
 
 #if ALLOW_DEPRECATED_FUNCTIONS
 // suppress cpplint warnings with NOLINT comment
-void (*SdFile::oldDateTime_)(uint16_t& date, uint16_t& time) = NULL;  // NOLINT
+void (*UdFile::oldDateTime_)(uint16_t& date, uint16_t& time) = NULL;  // NOLINT
 #endif  // ALLOW_DEPRECATED_FUNCTIONS
 //------------------------------------------------------------------------------
 // add a cluster to a file
-uint8_t SdFile::addCluster() {
+uint8_t UdFile::addCluster() {
   if (!vol_->allocContiguous(1, &curCluster_)) return false;
 
   // if first cluster of file link to directory entry
@@ -45,13 +46,13 @@ uint8_t SdFile::addCluster() {
 //------------------------------------------------------------------------------
 // Add a cluster to a directory file and zero the cluster.
 // return with first block of cluster in the cache
-uint8_t SdFile::addDirCluster(void) {
+uint8_t UdFile::addDirCluster(void) {
   if (!addCluster()) return false;
 
   // zero data in cluster insure first cluster is in cache
   uint32_t block = vol_->clusterStartBlock(curCluster_);
   for (uint8_t i = vol_->blocksPerCluster_; i != 0; i--) {
-    if (!SdVolume::cacheZeroBlock(block + i - 1)) return false;
+    if (!UdVolume::cacheZeroBlock(block + i - 1)) return false;
   }
   // Increase directory file size by cluster size
   fileSize_ += 512UL << vol_->clusterSizeShift_;
@@ -60,9 +61,9 @@ uint8_t SdFile::addDirCluster(void) {
 //------------------------------------------------------------------------------
 // cache a file's directory entry
 // return pointer to cached entry or null for failure
-dir_t* SdFile::cacheDirEntry(uint8_t action) {
-  if (!SdVolume::cacheRawBlock(dirBlock_, action)) return NULL;
-  return SdVolume::cacheBuffer_.dir + dirIndex_;
+dir_t* UdFile::cacheDirEntry(uint8_t action) {
+  if (!UdVolume::cacheRawBlock(dirBlock_, action)) return NULL;
+  return UdVolume::cacheBuffer_.dir + dirIndex_;
 }
 //------------------------------------------------------------------------------
 /**
@@ -73,7 +74,7 @@ dir_t* SdFile::cacheDirEntry(uint8_t action) {
  * the value zero, false, is returned for failure.
  * Reasons for failure include no file is open or an I/O error.
  */
-uint8_t SdFile::close(void) {
+uint8_t UdFile::close(void) {
   if (!sync())return false;
   type_ = FAT_FILE_TYPE_CLOSED;
   return true;
@@ -90,7 +91,7 @@ uint8_t SdFile::close(void) {
  * Reasons for failure include file is not contiguous, file has zero length
  * or an I/O error occurred.
  */
-uint8_t SdFile::contiguousRange(uint32_t* bgnBlock, uint32_t* endBlock) {
+uint8_t UdFile::contiguousRange(uint32_t* bgnBlock, uint32_t* endBlock) {
   // error if no blocks
   if (firstCluster_ == 0) return false;
 
@@ -128,7 +129,7 @@ uint8_t SdFile::contiguousRange(uint32_t* bgnBlock, uint32_t* endBlock) {
  * directory is full or an I/O error.
  *
  */
-uint8_t SdFile::createContiguous(SdFile* dirFile,
+uint8_t UdFile::createContiguous(UdFile* dirFile,
         const char* fileName, uint32_t size) {
   // don't allow zero length file
   if (size == 0) return false;
@@ -157,12 +158,12 @@ uint8_t SdFile::createContiguous(SdFile* dirFile,
  * \return The value one, true, is returned for success and
  * the value zero, false, is returned for failure.
  */
-uint8_t SdFile::dirEntry(dir_t* dir) {
+uint8_t UdFile::dirEntry(dir_t* dir) {
   // make sure fields on SD are correct
   if (!sync()) return false;
 
   // read entry
-  dir_t* p = cacheDirEntry(SdVolume::CACHE_FOR_READ);
+  dir_t* p = cacheDirEntry(UdVolume::CACHE_FOR_READ);
   if (!p) return false;
 
   // copy to caller's struct
@@ -177,7 +178,7 @@ uint8_t SdFile::dirEntry(dir_t* dir) {
  * \param[in] dir The directory structure containing the name.
  * \param[out] name A 13 byte char array for the formatted name.
  */
-void SdFile::dirName(const dir_t& dir, char* name) {
+void UdFile::dirName(const dir_t& dir, char* name) {
   uint8_t j = 0;
   for (uint8_t i = 0; i < 11; i++) {
     if (dir.name[i] == ' ')continue;
@@ -200,7 +201,7 @@ void SdFile::dirName(const dir_t& dir, char* name) {
  * \param[in] indent Amount of space before file name. Used for recursive
  * list to indicate subdirectory level.
  */
-void SdFile::ls(uint8_t flags, uint8_t indent) {
+void UdFile::ls(uint8_t flags, uint8_t indent) {
   dir_t* p;
 
   rewind();
@@ -236,7 +237,7 @@ void SdFile::ls(uint8_t flags, uint8_t indent) {
     // list subdirectory content if requested
     if ((flags & LS_R) && DIR_IS_SUBDIR(p)) {
       uint16_t index = curPosition()/32 - 1;
-      SdFile s;
+      UdFile s;
       if (s.open(this, index, O_READ)) s.ls(flags, indent + 2);
       seekSet(32 * (index + 1));
     }
@@ -244,7 +245,7 @@ void SdFile::ls(uint8_t flags, uint8_t indent) {
 }
 //------------------------------------------------------------------------------
 // format directory name field from a 8.3 name string
-uint8_t SdFile::make83Name(const char* str, uint8_t* name) {
+uint8_t UdFile::make83Name(const char* str, uint8_t* name) {
   uint8_t c;
   uint8_t n = 7;  // max index for part before dot
   uint8_t i = 0;
@@ -286,16 +287,16 @@ uint8_t SdFile::make83Name(const char* str, uint8_t* name) {
  *
  * \return The value one, true, is returned for success and
  * the value zero, false, is returned for failure.
- * Reasons for failure include this SdFile is already open, \a dir is not a
+ * Reasons for failure include this UdFile is already open, \a dir is not a
  * directory, \a dirName is invalid or already exists in \a dir.
  */
-uint8_t SdFile::makeDir(SdFile* dir, const char* dirName) {
+uint8_t UdFile::makeDir(UdFile* dir, const char* dirName) {
   dir_t d;
 
   // create a normal file
   if (!open(dir, dirName, O_CREAT | O_EXCL | O_RDWR)) return false;
 
-  // convert SdFile to directory
+  // convert UdFile to directory
   flags_ = O_READ;
   type_ = FAT_FILE_TYPE_SUBDIR;
 
@@ -306,7 +307,7 @@ uint8_t SdFile::makeDir(SdFile* dir, const char* dirName) {
   if (!sync()) return false;
 
   // cache entry - should already be in cache due to sync() call
-  dir_t* p = cacheDirEntry(SdVolume::CACHE_FOR_WRITE);
+  dir_t* p = cacheDirEntry(UdVolume::CACHE_FOR_WRITE);
   if (!p) return false;
 
   // change directory entry  attribute
@@ -319,10 +320,10 @@ uint8_t SdFile::makeDir(SdFile* dir, const char* dirName) {
 
   // cache block for '.'  and '..'
   uint32_t block = vol_->clusterStartBlock(firstCluster_);
-  if (!SdVolume::cacheRawBlock(block, SdVolume::CACHE_FOR_WRITE)) return false;
+  if (!UdVolume::cacheRawBlock(block, UdVolume::CACHE_FOR_WRITE)) return false;
 
   // copy '.' to block
-  memcpy(&SdVolume::cacheBuffer_.dir[0], &d, sizeof(d));
+  memcpy(&UdVolume::cacheBuffer_.dir[0], &d, sizeof(d));
 
   // make entry for '..'
   d.name[1] = '.';
@@ -334,13 +335,13 @@ uint8_t SdFile::makeDir(SdFile* dir, const char* dirName) {
     d.firstClusterHigh = dir->firstCluster_ >> 16;
   }
   // copy '..' to block
-  memcpy(&SdVolume::cacheBuffer_.dir[1], &d, sizeof(d));
+  memcpy(&UdVolume::cacheBuffer_.dir[1], &d, sizeof(d));
 
   // set position after '..'
   curPosition_ = 2 * sizeof(d);
 
   // write first block
-  return SdVolume::cacheFlush();
+  return UdVolume::cacheFlush();
 }
 //------------------------------------------------------------------------------
 /**
@@ -385,11 +386,11 @@ uint8_t SdFile::makeDir(SdFile* dir, const char* dirName) {
  *
  * \return The value one, true, is returned for success and
  * the value zero, false, is returned for failure.
- * Reasons for failure include this SdFile is already open, \a difFile is not
+ * Reasons for failure include this UdFile is already open, \a difFile is not
  * a directory, \a fileName is invalid, the file does not exist
  * or can't be opened in the access mode specified by oflag.
  */
-uint8_t SdFile::open(SdFile* dirFile, const char* fileName, uint8_t oflag) {
+uint8_t UdFile::open(UdFile* dirFile, const char* fileName, uint8_t oflag) {
   uint8_t dname[11];
   dir_t* p;
 
@@ -414,7 +415,7 @@ uint8_t SdFile::open(SdFile* dirFile, const char* fileName, uint8_t oflag) {
       if (!emptyFound) {
         emptyFound = true;
         dirIndex_ = index;
-        dirBlock_ = SdVolume::cacheBlockNumber_;
+        dirBlock_ = UdVolume::cacheBlockNumber_;
       }
       // done if no entries follow
       if (p->name[0] == DIR_NAME_FREE) break;
@@ -431,7 +432,7 @@ uint8_t SdFile::open(SdFile* dirFile, const char* fileName, uint8_t oflag) {
 
   // cache found slot or add cluster if end of file
   if (emptyFound) {
-    p = cacheDirEntry(SdVolume::CACHE_FOR_WRITE);
+    p = cacheDirEntry(UdVolume::CACHE_FOR_WRITE);
     if (!p) return false;
   } else {
     if (dirFile->type_ == FAT_FILE_TYPE_ROOT16) return false;
@@ -441,7 +442,7 @@ uint8_t SdFile::open(SdFile* dirFile, const char* fileName, uint8_t oflag) {
 
     // use first entry in cluster
     dirIndex_ = 0;
-    p = SdVolume::cacheBuffer_.dir;
+    p = UdVolume::cacheBuffer_.dir;
   }
   // initialize as empty file
   memset(p, 0, sizeof(dir_t));
@@ -461,7 +462,7 @@ uint8_t SdFile::open(SdFile* dirFile, const char* fileName, uint8_t oflag) {
   p->lastWriteTime = p->creationTime;
 
   // force write of entry to SD
-  if (!SdVolume::cacheFlush()) return false;
+  if (!UdVolume::cacheFlush()) return false;
 
   // open entry in cache
   return openCachedEntry(dirIndex_, oflag);
@@ -481,7 +482,7 @@ uint8_t SdFile::open(SdFile* dirFile, const char* fileName, uint8_t oflag) {
  * See open() by fileName for definition of flags and return values.
  *
  */
-uint8_t SdFile::open(SdFile* dirFile, uint16_t index, uint8_t oflag) {
+uint8_t UdFile::open(UdFile* dirFile, uint16_t index, uint8_t oflag) {
   // error if already open
   if (isOpen())return false;
 
@@ -507,9 +508,9 @@ uint8_t SdFile::open(SdFile* dirFile, uint16_t index, uint8_t oflag) {
 }
 //------------------------------------------------------------------------------
 // open a cached directory entry. Assumes vol_ is initializes
-uint8_t SdFile::openCachedEntry(uint8_t dirIndex, uint8_t oflag) {
+uint8_t UdFile::openCachedEntry(uint8_t dirIndex, uint8_t oflag) {
   // location of entry in cache
-  dir_t* p = SdVolume::cacheBuffer_.dir + dirIndex;
+  dir_t* p = UdVolume::cacheBuffer_.dir + dirIndex;
 
   // write or truncate is an error for a directory or read-only file
   if (p->attributes & (DIR_ATT_READ_ONLY | DIR_ATT_DIRECTORY)) {
@@ -517,7 +518,7 @@ uint8_t SdFile::openCachedEntry(uint8_t dirIndex, uint8_t oflag) {
   }
   // remember location of directory entry on SD
   dirIndex_ = dirIndex;
-  dirBlock_ = SdVolume::cacheBlockNumber_;
+  dirBlock_ = UdVolume::cacheBlockNumber_;
 
   // copy first cluster number for directory fields
   firstCluster_ = (uint32_t)p->firstClusterHigh << 16;
@@ -555,7 +556,7 @@ uint8_t SdFile::openCachedEntry(uint8_t dirIndex, uint8_t oflag) {
  * Reasons for failure include the FAT volume has not been initialized
  * or it a FAT12 volume.
  */
-uint8_t SdFile::openRoot(SdVolume* vol) {
+uint8_t UdFile::openRoot(UdVolume* vol) {
   // error if file is already open
   if (isOpen()) return false;
 
@@ -590,7 +591,7 @@ uint8_t SdFile::openRoot(SdVolume* vol) {
  * \param[in] dir The directory structure containing the name.
  * \param[in] width Blank fill name if length is less than \a width.
  */
-void SdFile::printDirName(const dir_t& dir, uint8_t width) {
+void UdFile::printDirName(const dir_t& dir, uint8_t width) {
   uint8_t w = 0;
   for (uint8_t i = 0; i < 11; i++) {
     if (dir.name[i] == ' ')continue;
@@ -617,7 +618,7 @@ void SdFile::printDirName(const dir_t& dir, uint8_t width) {
  *
  * \param[in] fatDate The date field from a directory entry.
  */
-void SdFile::printFatDate(uint16_t fatDate) {
+void UdFile::printFatDate(uint16_t fatDate) {
   Serial.print(FAT_YEAR(fatDate));
   Serial.print('-');
   printTwoDigits(FAT_MONTH(fatDate));
@@ -631,7 +632,7 @@ void SdFile::printFatDate(uint16_t fatDate) {
  *
  * \param[in] fatTime The time field from a directory entry.
  */
-void SdFile::printFatTime(uint16_t fatTime) {
+void UdFile::printFatTime(uint16_t fatTime) {
   printTwoDigits(FAT_HOUR(fatTime));
   Serial.print(':');
   printTwoDigits(FAT_MINUTE(fatTime));
@@ -643,7 +644,7 @@ void SdFile::printFatTime(uint16_t fatTime) {
  *
  * \param[in] v Value to be printed, 0 <= \a v <= 99
  */
-void SdFile::printTwoDigits(uint8_t v) {
+void UdFile::printTwoDigits(uint8_t v) {
   char str[3];
   str[0] = '0' + v/10;
   str[1] = '0' + v % 10;
@@ -665,7 +666,7 @@ void SdFile::printTwoDigits(uint8_t v) {
  * read() called before a file has been opened, corrupt file system
  * or an I/O error occurred.
  */
-int16_t SdFile::read(void* buf, uint16_t nbyte) {
+int16_t UdFile::read(void* buf, uint16_t nbyte) {
   uint8_t* dst = reinterpret_cast<uint8_t*>(buf);
 
   // error if not open or write only
@@ -702,13 +703,13 @@ int16_t SdFile::read(void* buf, uint16_t nbyte) {
 
     // no buffering needed if n == 512 or user requests no buffering
     if ((unbufferedRead() || n == 512) &&
-      block != SdVolume::cacheBlockNumber_) {
+      block != UdVolume::cacheBlockNumber_) {
       if (!vol_->readData(block, offset, n, dst)) return -1;
       dst += n;
     } else {
       // read block to cache and copy data to caller
-      if (!SdVolume::cacheRawBlock(block, SdVolume::CACHE_FOR_READ)) return -1;
-      uint8_t* src = SdVolume::cacheBuffer_.data + offset;
+      if (!UdVolume::cacheRawBlock(block, UdVolume::CACHE_FOR_READ)) return -1;
+      uint8_t* src = UdVolume::cacheBuffer_.data + offset;
       uint8_t* end = src + n;
       while (src != end) *dst++ = *src++;
     }
@@ -729,7 +730,7 @@ int16_t SdFile::read(void* buf, uint16_t nbyte) {
  * readDir() called before a directory has been opened, this is not
  * a directory file or an I/O error occurred.
  */
-int8_t SdFile::readDir(dir_t* dir) {
+int8_t UdFile::readDir(dir_t* dir) {
   int8_t n;
   // if not a directory file or miss-positioned return an error
   if (!isDir() || (0X1F & curPosition_)) return -1;
@@ -748,7 +749,7 @@ int8_t SdFile::readDir(dir_t* dir) {
 //------------------------------------------------------------------------------
 // Read next directory entry into the cache
 // Assumes file is correctly positioned
-dir_t* SdFile::readDirCache(void) {
+dir_t* UdFile::readDirCache(void) {
   // error if not directory
   if (!isDir()) return NULL;
 
@@ -762,7 +763,7 @@ dir_t* SdFile::readDirCache(void) {
   curPosition_ += 31;
 
   // return pointer to entry
-  return (SdVolume::cacheBuffer_.dir + i);
+  return (UdVolume::cacheBuffer_.dir + i);
 }
 //------------------------------------------------------------------------------
 /**
@@ -779,22 +780,22 @@ dir_t* SdFile::readDirCache(void) {
  * Reasons for failure include the file read-only, is a directory,
  * or an I/O error occurred.
  */
-uint8_t SdFile::remove(void) {
+uint8_t UdFile::remove(void) {
   // free any clusters - will fail if read-only or directory
   if (!truncate(0)) return false;
 
   // cache directory entry
-  dir_t* d = cacheDirEntry(SdVolume::CACHE_FOR_WRITE);
+  dir_t* d = cacheDirEntry(UdVolume::CACHE_FOR_WRITE);
   if (!d) return false;
 
   // mark entry deleted
   d->name[0] = DIR_NAME_DELETED;
 
-  // set this SdFile closed
+  // set this UdFile closed
   type_ = FAT_FILE_TYPE_CLOSED;
 
   // write entry to SD
-  return SdVolume::cacheFlush();
+  return UdVolume::cacheFlush();
 }
 //------------------------------------------------------------------------------
 /**
@@ -815,8 +816,8 @@ uint8_t SdFile::remove(void) {
  * \a dirFile is not a directory, \a fileName is not found
  * or an I/O error occurred.
  */
-uint8_t SdFile::remove(SdFile* dirFile, const char* fileName) {
-  SdFile file;
+uint8_t UdFile::remove(UdFile* dirFile, const char* fileName) {
+  UdFile file;
   if (!file.open(dirFile, fileName, O_WRITE)) return false;
   return file.remove();
 }
@@ -836,7 +837,7 @@ uint8_t SdFile::remove(SdFile* dirFile, const char* fileName) {
  * Reasons for failure include the file is not a directory, is the root
  * directory, is not empty, or an I/O error occurred.
  */
-uint8_t SdFile::rmDir(void) {
+uint8_t UdFile::rmDir(void) {
   // must be open subdirectory
   if (!isSubDir()) return false;
 
@@ -874,10 +875,10 @@ uint8_t SdFile::rmDir(void) {
  * \return The value one, true, is returned for success and
  * the value zero, false, is returned for failure.
  */
-uint8_t SdFile::rmRfStar(void) {
+uint8_t UdFile::rmRfStar(void) {
   rewind();
   while (curPosition_ < fileSize_) {
-    SdFile f;
+    UdFile f;
 
     // remember position
     uint16_t index = curPosition_/32;
@@ -921,7 +922,7 @@ uint8_t SdFile::rmRfStar(void) {
  * \return The value one, true, is returned for success and
  * the value zero, false, is returned for failure.
  */
-uint8_t SdFile::seekSet(uint32_t pos) {
+uint8_t UdFile::seekSet(uint32_t pos) {
   // error if file not open or seek past end of file
   if (!isOpen() || pos > fileSize_) return false;
 
@@ -962,12 +963,12 @@ uint8_t SdFile::seekSet(uint32_t pos) {
  * Reasons for failure include a call to sync() before a file has been
  * opened or an I/O error.
  */
-uint8_t SdFile::sync(void) {
+uint8_t UdFile::sync(void) {
   // only allow open files and directories
   if (!isOpen()) return false;
 
   if (flags_ & F_FILE_DIR_DIRTY) {
-    dir_t* d = cacheDirEntry(SdVolume::CACHE_FOR_WRITE);
+    dir_t* d = cacheDirEntry(UdVolume::CACHE_FOR_WRITE);
     if (!d) return false;
 
     // do not set filesize for dir files
@@ -985,7 +986,7 @@ uint8_t SdFile::sync(void) {
     // clear directory dirty
     flags_ &= ~F_FILE_DIR_DIRTY;
   }
-  return SdVolume::cacheFlush();
+  return UdVolume::cacheFlush();
 }
 //------------------------------------------------------------------------------
 /**
@@ -1022,7 +1023,7 @@ uint8_t SdFile::sync(void) {
  * \return The value one, true, is returned for success and
  * the value zero, false, is returned for failure.
  */
-uint8_t SdFile::timestamp(uint8_t flags, uint16_t year, uint8_t month,
+uint8_t UdFile::timestamp(uint8_t flags, uint16_t year, uint8_t month,
          uint8_t day, uint8_t hour, uint8_t minute, uint8_t second) {
   if (!isOpen()
     || year < 1980
@@ -1036,7 +1037,7 @@ uint8_t SdFile::timestamp(uint8_t flags, uint16_t year, uint8_t month,
     || second > 59) {
       return false;
   }
-  dir_t* d = cacheDirEntry(SdVolume::CACHE_FOR_WRITE);
+  dir_t* d = cacheDirEntry(UdVolume::CACHE_FOR_WRITE);
   if (!d) return false;
 
   uint16_t dirDate = FAT_DATE(year, month, day);
@@ -1054,7 +1055,7 @@ uint8_t SdFile::timestamp(uint8_t flags, uint16_t year, uint8_t month,
     d->lastWriteDate = dirDate;
     d->lastWriteTime = dirTime;
   }
-  SdVolume::cacheSetDirty();
+  UdVolume::cacheSetDirty();
   return sync();
 }
 //------------------------------------------------------------------------------
@@ -1070,7 +1071,7 @@ uint8_t SdFile::timestamp(uint8_t flags, uint16_t year, uint8_t month,
  * Reasons for failure include file is read only, file is a directory,
  * \a length is greater than the current file size or an I/O error occurs.
  */
-uint8_t SdFile::truncate(uint32_t length) {
+uint8_t UdFile::truncate(uint32_t length) {
 // error if not a normal file or read-only
   if (!isFile() || !(flags_ & O_WRITE)) return false;
 
@@ -1129,7 +1130,7 @@ uint8_t SdFile::truncate(uint32_t length) {
  * for a read-only file, device is full, a corrupt file system or an I/O error.
  *
  */
-size_t SdFile::write(const void* buf, uint16_t nbyte) {
+size_t UdFile::write(const void* buf, uint16_t nbyte) {
   // convert void* to uint8_t*  -  must be before goto statements
   const uint8_t* src = reinterpret_cast<const uint8_t*>(buf);
 
@@ -1178,24 +1179,24 @@ size_t SdFile::write(const void* buf, uint16_t nbyte) {
     if (n == 512) {
       // full block - don't need to use cache
       // invalidate cache if block is in cache
-      if (SdVolume::cacheBlockNumber_ == block) {
-        SdVolume::cacheBlockNumber_ = 0XFFFFFFFF;
+      if (UdVolume::cacheBlockNumber_ == block) {
+        UdVolume::cacheBlockNumber_ = 0XFFFFFFFF;
       }
       if (!vol_->writeBlock(block, src)) goto writeErrorReturn;
       src += 512;
     } else {
       if (blockOffset == 0 && curPosition_ >= fileSize_) {
         // start of new block don't need to read into cache
-        if (!SdVolume::cacheFlush()) goto writeErrorReturn;
-        SdVolume::cacheBlockNumber_ = block;
-        SdVolume::cacheSetDirty();
+        if (!UdVolume::cacheFlush()) goto writeErrorReturn;
+        UdVolume::cacheBlockNumber_ = block;
+        UdVolume::cacheSetDirty();
       } else {
         // rewrite part of block
-        if (!SdVolume::cacheRawBlock(block, SdVolume::CACHE_FOR_WRITE)) {
+        if (!UdVolume::cacheRawBlock(block, UdVolume::CACHE_FOR_WRITE)) {
           goto writeErrorReturn;
         }
       }
-      uint8_t* dst = SdVolume::cacheBuffer_.data + blockOffset;
+      uint8_t* dst = UdVolume::cacheBuffer_.data + blockOffset;
       uint8_t* end = dst + n;
       while (dst != end) *dst++ = *src++;
     }
@@ -1226,18 +1227,18 @@ size_t SdFile::write(const void* buf, uint16_t nbyte) {
 /**
  * Write a byte to a file. Required by the Arduino Print class.
  *
- * Use SdFile::writeError to check for errors.
+ * Use UdFile::writeError to check for errors.
  */
-size_t SdFile::write(uint8_t b) {
+size_t UdFile::write(uint8_t b) {
   return write(&b, 1);
 }
 //------------------------------------------------------------------------------
 /**
  * Write a string to a file. Used by the Arduino Print class.
  *
- * Use SdFile::writeError to check for errors.
+ * Use UdFile::writeError to check for errors.
  */
-size_t SdFile::write(const char* str) {
+size_t UdFile::write(const char* str) {
   return write(str, strlen(str));
 }
 #ifdef __AVR__
@@ -1245,19 +1246,20 @@ size_t SdFile::write(const char* str) {
 /**
  * Write a PROGMEM string to a file.
  *
- * Use SdFile::writeError to check for errors.
+ * Use UdFile::writeError to check for errors.
  */
-void SdFile::write_P(PGM_P str) {
+void UdFile::write_P(PGM_P str) {
   for (uint8_t c; (c = pgm_read_byte(str)); str++) write(c);
 }
 //------------------------------------------------------------------------------
 /**
  * Write a PROGMEM string followed by CR/LF to a file.
  *
- * Use SdFile::writeError to check for errors.
+ * Use UdFile::writeError to check for errors.
  */
-void SdFile::writeln_P(PGM_P str) {
+void UdFile::writeln_P(PGM_P str) {
   write_P(str);
   println();
 }
 #endif
+};

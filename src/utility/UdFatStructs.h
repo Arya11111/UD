@@ -1,4 +1,4 @@
-/* Arduino SdFat Library
+/* Arduino FAT Library
  * Copyright (C) 2009 by William Greiman
  *
  * This file is part of the Arduino SdFat Library
@@ -17,8 +17,9 @@
  * along with the Arduino SdFat Library.  If not, see
  * <http://www.gnu.org/licenses/>.
  */
-#ifndef Structs_h
-#define Structs_h
+#ifndef __UDFATSTRUCTS_H
+#define __UDFATSTRUCTS_H
+namespace UDLib{
 /**
  * \file
  * FAT file structures
@@ -415,4 +416,5 @@ static inline uint8_t DIR_IS_SUBDIR(const dir_t* dir) {
 static inline uint8_t DIR_IS_FILE_OR_SUBDIR(const dir_t* dir) {
   return (dir->attributes & DIR_ATT_VOLUME_ID) == 0;
 }
+};
 #endif  // FatStructs_h

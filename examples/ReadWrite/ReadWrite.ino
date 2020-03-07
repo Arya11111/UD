@@ -1,6 +1,13 @@
-/*
-  UD Disk read/write
- This example shows how to read and write data to and from an UD disk file
+/*!
+ * @file ReadWrite.ino
+ * @brief UD Disk read/write
+ * @n This example shows how to read and write data to and from an UD disk file
+ *
+ * @copyright   Copyright (c) 2010 DFRobot Co.Ltd (http://www.dfrobot.com)
+ * @licence     The MIT License (MIT)
+ * @version  V1.0
+ * @date  2019-03-5
+ * @get from https://www.dfrobot.com
  */
 #include <UD.h>
 
@@ -11,7 +18,6 @@ void setup() {
   Serial.begin(115200);
   while (!SerialUSB) {
     ; // wait for serial port to connect. Needed for native USB port only
-   SerialUSB.println(1);
   }
 
   Serial.print("Initializing UD disk...");
@@ -43,9 +49,9 @@ void setup() {
     Serial.print("test.txt:");
     // read from the file until there's nothing else in it:
     while (myFile.available()) {
-      SerialUSB.print(myFile.read());
+      SerialUSB.write(myFile.read());
     }
-	SerialUSB.println();
+    SerialUSB.println();
     // close the file:
     myFile.close();
   } else {
