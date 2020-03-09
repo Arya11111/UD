@@ -19,7 +19,9 @@
  */
 #ifndef __UDDISK_H
 #define __UDDISK_H
+#ifdef ARDUINO_SAM_ZERO
 #include <variant.h>
+#endif
 
 #define SPI_FLASH_SS_PIN 32
 #define UD_PROTECT_BLOCK_ZERO 1

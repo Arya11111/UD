@@ -13,7 +13,9 @@
 #include <W25Q.h>
 
 #include "utility/UdFat.h"
+#ifdef ARDUINO_SAM_ZERO
 #include <variant.h>
+#endif
 #define FILE_READ UDLib::O_READ
 #define FILE_WRITE (UDLib::O_READ | UDLib::O_WRITE | UDLib::O_CREAT | UDLib::O_APPEND)
 
